@@ -3,24 +3,40 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Globe } from "lucide-react";
+import { Globe, AlertCircle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function Login() {
   const [, navigate] = useLocation();
   const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      // TODO: Call loginUser endpoint
-      console.log("Login:", { email, name });
-      // navigate("/test");
-    } finally {
-      setLoading(false);
+  const loginMutation = trpc.auth.loginUser.useMutation({
+    onSuccess: (data) => {
+      toast.success(t("loginSuccess", "Добро пожаловать!", "Xush kelibsiz!"));
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userId", data.user?.id?.toString() || "");
+      navigate("/test");
+    },
+    onError: (err) => {
+      setError(err.message || t("loginError", "Ошибка входа", "Kirish xatosi"));
+      toast.error(err.message);
+    },
+  });
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !name) {
+      setError(t("fillFields", "Заполните все поля", "Barcha maydonlarni to'ldiring"));
+      return;
     }
+
+    loginMutation.mutate({ email, name });
   };
 
   return (
@@ -69,7 +85,7 @@ export default function Login() {
             )}
           </p>
 
-          <div className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-white font-semibold mb-2">
                 {t("email", "Email", "Email")}
@@ -80,6 +96,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/5 border-orange-500/50 text-white placeholder:text-gray-400"
+                disabled={loginMutation.isPending}
               />
             </div>
 
@@ -93,21 +110,37 @@ export default function Login() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="bg-white/5 border-orange-500/50 text-white placeholder:text-gray-400"
+                disabled={loginMutation.isPending}
               />
             </div>
 
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 flex gap-2 items-start">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
             <Button
-              onClick={handleLogin}
-              disabled={loading || !email || !name}
+              type="submit"
+              disabled={loginMutation.isPending || !email || !name}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-orange-500/50 transition-all mt-6"
             >
-              {loading ? t("loading", "Загрузка...", "Yuklanmoqda...") : t("login", "Вход", "Kirish")}
+              {loginMutation.isPending ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  {t("loggingIn", "Вход...", "Kirilmoqda...")}
+                </>
+              ) : (
+                t("loginButton", "Войти", "Kirish")
+              )}
             </Button>
 
             <div className="text-center mt-4">
               <p className="text-gray-300">
                 {t("noAccount", "Нет аккаунта?", "Hisob yo'qmi?")} 
                 <button
+                  type="button"
                   onClick={() => navigate("/register")}
                   className="text-orange-300 hover:text-orange-200 font-semibold ml-2"
                 >
@@ -115,7 +148,7 @@ export default function Login() {
                 </button>
               </p>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

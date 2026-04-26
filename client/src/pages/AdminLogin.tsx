@@ -3,24 +3,40 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Globe } from "lucide-react";
+import { Globe, AlertCircle, Lock } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function AdminLogin() {
   const [, navigate] = useLocation();
   const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      // TODO: Call loginAdmin endpoint
-      console.log("Admin Login:", { email, password });
-      // navigate("/admin");
-    } finally {
-      setLoading(false);
+  const loginMutation = trpc.auth.loginAdmin.useMutation({
+    onSuccess: (data) => {
+      toast.success(t("adminLoginSuccess", "Добро пожаловать, администратор!", "Xush kelibsiz, admin!"));
+      localStorage.setItem("adminToken", data.token);
+      localStorage.setItem("adminId", data.admin?.id?.toString() || "");
+      navigate("/admin");
+    },
+    onError: (err) => {
+      setError(err.message || t("adminLoginError", "Ошибка входа администратора", "Admin kirish xatosi"));
+      toast.error(err.message);
+    },
+  });
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError(t("fillFields", "Заполните все поля", "Barcha maydonlarni to'ldiring"));
+      return;
     }
+
+    loginMutation.mutate({ email, password });
   };
 
   return (
@@ -50,36 +66,40 @@ export default function AdminLogin() {
       {/* Back Button */}
       <button
         onClick={() => navigate("/")}
-        className="absolute top-6 left-6 text-white hover:text-teal-300 transition-colors"
+        className="absolute top-6 left-6 text-white hover:text-cyan-300 transition-colors"
       >
         ← {t("back", "Назад", "Orqaga")}
       </button>
 
       {/* Form Container */}
       <div className="relative z-10 w-full max-w-md mx-auto px-4">
-        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-teal-500/30 shadow-2xl">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-purple-500/30 shadow-2xl">
+          <div className="flex justify-center mb-4">
+            <Lock className="w-8 h-8 text-purple-400" />
+          </div>
           <h1 className="text-3xl font-bold text-white mb-2 text-center">
-            {t("adminLogin", "Админ вход", "Admin kirish")}
+            {t("adminLogin", "Вход администратора", "Admin kirishi")}
           </h1>
           <p className="text-gray-300 text-center mb-8">
             {t(
               "adminLoginDesc",
-              "Вход в админ панель",
-              "Admin paneliga kirish"
+              "Только для администраторов системы",
+              "Faqat tizim administratorlari uchun"
             )}
           </p>
 
-          <div className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-white font-semibold mb-2">
                 {t("email", "Email", "Email")}
               </label>
               <Input
                 type="email"
-                placeholder={t("emailPlaceholder", "admin@lume.uz", "admin@lume.uz")}
+                placeholder={t("emailPlaceholder", "admin@example.com", "admin@example.com")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border-teal-500/50 text-white placeholder:text-gray-400"
+                className="bg-white/5 border-purple-500/50 text-white placeholder:text-gray-400"
+                disabled={loginMutation.isPending}
               />
             </div>
 
@@ -92,27 +112,46 @@ export default function AdminLogin() {
                 placeholder={t("passwordPlaceholder", "••••••••", "••••••••")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-white/5 border-teal-500/50 text-white placeholder:text-gray-400"
+                className="bg-white/5 border-purple-500/50 text-white placeholder:text-gray-400"
+                disabled={loginMutation.isPending}
               />
             </div>
 
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 flex gap-2 items-start">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
             <Button
-              onClick={handleLogin}
-              disabled={loading || !email || !password}
-              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-teal-500/50 transition-all mt-6"
+              type="submit"
+              disabled={loginMutation.isPending || !email || !password}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-lg shadow-lg transition-all mt-6"
             >
-              {loading ? t("loading", "Загрузка...", "Yuklanmoqda...") : t("adminLogin", "Админ вход", "Admin kirish")}
+              {loginMutation.isPending ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  {t("loggingIn", "Вход...", "Kirilmoqda...")}
+                </>
+              ) : (
+                t("adminLoginButton", "Войти как администратор", "Admin sifatida kirish")
+              )}
             </Button>
 
             <div className="text-center mt-4">
-              <button
-                onClick={() => navigate("/")}
-                className="text-teal-300 hover:text-teal-200 font-semibold"
-              >
-                {t("backHome", "Вернуться на главную", "Asosiy sahifaga qaytish")}
-              </button>
+              <p className="text-gray-300">
+                {t("userLogin", "Обычный пользователь?", "Oddiy foydalanuvchi?")} 
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="text-purple-300 hover:text-purple-200 font-semibold ml-2"
+                >
+                  {t("userLoginLink", "Войти", "Kirish")}
+                </button>
+              </p>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

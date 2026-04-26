@@ -3,24 +3,41 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Globe } from "lucide-react";
+import { Globe, AlertCircle, CheckCircle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function Register() {
   const [, navigate] = useLocation();
   const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const registerMutation = trpc.auth.registerUser.useMutation({
+    onSuccess: (data) => {
+      toast.success(t("registerSuccess", "Регистрация успешна!", "Ro'yxatdan o'tish muvaffaqiyatli!"));
+      // Store token in localStorage
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("userId", data.user?.id?.toString() || "");
+      navigate("/test");
+    },
+    onError: (err) => {
+      setError(err.message || t("registerError", "Ошибка регистрации", "Ro'yxatdan o'tishda xato"));
+      toast.error(error);
+    },
+  });
 
-  const handleRegister = async () => {
-    setLoading(true);
-    try {
-      // TODO: Call registerUser endpoint
-      console.log("Register:", { email, name });
-      // navigate("/test");
-    } finally {
-      setLoading(false);
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !name) {
+      setError(t("fillFields", "Заполните все поля", "Barcha maydonlarni to'ldiring"));
+      return;
     }
+
+    registerMutation.mutate({ email, name });
   };
 
   return (
@@ -69,7 +86,7 @@ export default function Register() {
             )}
           </p>
 
-          <div className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div>
               <label className="block text-white font-semibold mb-2">
                 {t("email", "Email", "Email")}
@@ -80,6 +97,7 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/5 border-cyan-500/50 text-white placeholder:text-gray-400"
+                disabled={registerMutation.isPending}
               />
             </div>
 
@@ -93,29 +111,43 @@ export default function Register() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="bg-white/5 border-cyan-500/50 text-white placeholder:text-gray-400"
+                disabled={registerMutation.isPending}
               />
             </div>
 
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 flex gap-2 items-start">
+                <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
             <Button
-              onClick={handleRegister}
-              disabled={loading || !email || !name}
-              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-cyan-500/50 transition-all mt-6"
+              type="submit"
+              className="w-full bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-600 hover:to-teal-600 text-white font-bold py-2 rounded-lg transition-all"
+              disabled={registerMutation.isPending}
             >
-              {loading ? t("loading", "Загрузка...", "Yuklanmoqda...") : t("register", "Регистрация", "Ro'yxatdan o'tish")}
+              {registerMutation.isPending ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  {t("registering", "Регистрация...", "Ro'yxatdan o'tilmoqda...")}
+                </>
+              ) : (
+                t("registerButton", "Зарегистрироваться", "Ro'yxatdan o'tish")
+              )}
             </Button>
 
-            <div className="text-center mt-4">
-              <p className="text-gray-300">
-                {t("haveAccount", "Уже есть аккаунт?", "Allaqachon hisob bormi?")} 
-                <button
-                  onClick={() => navigate("/login")}
-                  className="text-cyan-300 hover:text-cyan-200 font-semibold ml-2"
-                >
-                  {t("login", "Вход", "Kirish")}
-                </button>
-              </p>
-            </div>
-          </div>
+            <p className="text-center text-gray-400 text-sm">
+              {t("haveAccount", "Уже есть аккаунт?", "Allaqachon hisob bor?")}{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-cyan-400 hover:text-cyan-300 font-semibold"
+              >
+                {t("loginLink", "Войти", "Kirish")}
+              </button>
+            </p>
+          </form>
         </div>
       </div>
     </div>
