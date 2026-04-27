@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import AdminLogin from "./pages/AdminLogin";
 import Test from "./pages/Test";
 import Results from "./pages/Results";
+import UserProfile from "./pages/UserProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       <Route path={"/admin-login"} component={AdminLogin} />
       <Route path={"/test"} component={Test} />
       <Route path={"/results"} component={Results} />
+      <Route path={"/profile"} component={UserProfile} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

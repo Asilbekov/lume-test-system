@@ -5,7 +5,7 @@
 - [x] Gather 200 questions covering all Lume modules
 
 ## Phase 2: Database Schema
-- [x] Design users table (email, name, hasCompletedTest)
+- [x] Design users table (email, name, lastTestDate for monthly limit)
 - [x] Design admin_accounts table (email, password_hash)
 - [x] Design questions table (id, question_ru, question_uz, screenshot_url, module)
 - [x] Design question_options table (id, question_id, option_text_ru, option_text_uz, is_correct)
@@ -69,3 +69,49 @@
 - [x] Test bilingual UI rendering
 - [x] Verify dramatic design implementation
 - [x] Create checkpoint and deliver
+
+
+## ADDITIONAL FEATURES IMPLEMENTED
+
+### Monthly Test Limit (Updated from One-Time)
+- [x] Changed from one-time test to monthly test limit
+- [x] Updated schema: replaced `hasCompletedTest` boolean with `lastTestDate` timestamp
+- [x] Implemented `canTakeTest` endpoint that checks 30-day window
+- [x] Updated test endpoints to enforce monthly limit
+- [x] Users can take test once per 30 days instead of once forever
+
+### User Profile Page
+- [x] Created `/profile` route for authenticated users
+- [x] Shows user's email and last test score
+- [x] Displays correct/incorrect answer counts
+- [x] Shows test history with dates
+- [x] Displays countdown to next available test
+- [x] Bilingual support (Russian/Uzbek) on profile page
+- [x] Quick access to "Start Test" button if eligible
+
+### 200-Question Database
+- [x] Created comprehensive seed file with 200 questions
+- [x] Questions cover all Lume modules:
+  - Warehouse Operations (25 questions)
+  - Finance (20 questions)
+  - Reports (20 questions)
+  - Settings (15 questions)
+  - Reference (15 questions)
+  - Additional variations (105 questions)
+- [x] Each question has 3-4 answer options
+- [x] Full bilingual support (Russian and Uzbek)
+- [x] Questions structured for real Lume system knowledge
+
+### Backend Improvements
+- [x] Fixed TypeScript errors related to schema changes
+- [x] Updated all admin endpoints to use `lastTestDate`
+- [x] Implemented proper monthly limit validation
+- [x] Added `canTakeTest` endpoint for frontend checks
+- [x] Maintained backward compatibility with existing endpoints
+
+### Frontend Improvements
+- [x] Added UserProfile component with dramatic design
+- [x] Integrated language switcher on all pages
+- [x] Added profile link to navigation
+- [x] Real-time test eligibility checking
+- [x] Countdown display for monthly limit

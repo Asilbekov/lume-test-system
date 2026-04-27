@@ -94,12 +94,26 @@ export const appRouter = router({
 
   // Test Management
   test: router({
-    // Check if user has completed test
-    hasCompletedTest: publicProcedure
+    // Check if user can take test (monthly limit)
+    canTakeTest: publicProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
         const user = await getUserById(input.userId);
-        return { hasCompleted: user?.hasCompletedTest || false };
+        if (!user) return { canTake: true, message: "User not found" };
+        
+        // Check if user has taken test in last 30 days
+        if (user.lastTestDate) {
+          const lastTest = new Date(user.lastTestDate);
+          const now = new Date();
+          const daysSinceLastTest = Math.floor((now.getTime() - lastTest.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysSinceLastTest < 30) {
+            const daysRemaining = 30 - daysSinceLastTest;
+            return { canTake: false, message: `Можете пройти тест через ${daysRemaining} дней`, daysRemaining };
+          }
+        }
+        
+        return { canTake: true, message: "You can take the test" };
       }),
     
     // Get 20 random questions for test
@@ -108,7 +122,16 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const user = await getUserById(input.userId);
         if (!user) throw new Error("User not found");
-        if (user.hasCompletedTest) throw new Error("Test already completed");
+        
+        // Check monthly limit
+        if (user.lastTestDate) {
+          const lastTest = new Date(user.lastTestDate);
+          const now = new Date();
+          const daysSinceLastTest = Math.floor((now.getTime() - lastTest.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceLastTest < 30) {
+            throw new Error("Test can only be taken once per month");
+          }
+        }
         
         // Get random 20 questions
         const allQuestions = await getRandomQuestions(200);
@@ -137,7 +160,16 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const user = await getUserById(input.userId);
         if (!user) throw new Error("User not found");
-        if (user.hasCompletedTest) throw new Error("Test already completed");
+        
+        // Check monthly limit
+        if (user.lastTestDate) {
+          const lastTest = new Date(user.lastTestDate);
+          const now = new Date();
+          const daysSinceLastTest = Math.floor((now.getTime() - lastTest.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysSinceLastTest < 30) {
+            throw new Error("Test can only be taken once per month");
+          }
+        }
         
         // Create test session
         const sessionResult = await createTestSession(input.userId);
@@ -207,7 +239,7 @@ export const appRouter = router({
           return {
             ...user,
             testScore: session?.score || null,
-            hasCompletedTest: user.hasCompletedTest,
+            lastTestDate: user.lastTestDate,
             completedAt: session?.completedAt || null
           };
         })
@@ -233,7 +265,7 @@ export const appRouter = router({
             return {
               ...user,
               testScore: session?.score || null,
-              hasCompletedTest: user.hasCompletedTest,
+              lastTestDate: user.lastTestDate,
               completedAt: session?.completedAt || null
             };
           })

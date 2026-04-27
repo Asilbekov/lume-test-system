@@ -8,7 +8,7 @@ export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
-  hasCompletedTest: boolean("hasCompletedTest").default(false).notNull(),
+  lastTestDate: timestamp("lastTestDate"), // Track when user last took the test (for monthly limit)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

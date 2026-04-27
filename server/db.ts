@@ -53,7 +53,7 @@ export async function markUserTestCompleted(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.update(users).set({ hasCompletedTest: true }).where(eq(users.id, userId));
+  await db.update(users).set({ lastTestDate: new Date() }).where(eq(users.id, userId));
 }
 
 // Admin queries
